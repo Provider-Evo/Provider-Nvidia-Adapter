@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Nvidia HTTP 客户端。"""
 
 import asyncio
@@ -43,7 +41,7 @@ class NvidiaClient:
         self._session = session
         from ..accounts import API_KEYS
 
-        self._keys = [_KeyState(k) for k in API_KEYS if k and k.strip()]
+        self._keys = [_KeyState(k) for k in load_plugin_api_keys(_PLUGIN_DIR, API_KEYS)]
         self._rebuild_candidates()
         logger.info(
             "nvidia客户端初始化完成, %d个APIKey, %d个模型",
