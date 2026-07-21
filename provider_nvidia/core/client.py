@@ -5,6 +5,8 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import aiohttp
 
+from provider_sdk.model_ids import ModelIdRegistry
+
 from src.core.dispatch.cand import Candidate, make_id
 from src.core.utils.errors import PlatformError
 from src.foundation.logger import get_logger
@@ -28,7 +30,11 @@ class NvidiaClient:
 
     def __init__(self) -> None:
         self._session: Optional[aiohttp.ClientSession] = None
-        self._models: List[str] = []
+        self._model_registry = ModelIdRegistry("nvidia")
+        self._model_registry.load()
+        from .consts import MODELS
+
+        self._models: List[str] = self._model_registry.merge_fallback(MODELS)
         self._keys: List[_KeyState] = []
         self._candidates: List[Candidate] = []
 
@@ -59,9 +65,9 @@ class NvidiaClient:
         Args:
             models: 新的模型列表。
         """
-        self._models = list(models)
+        self._models = self._model_registry.register_many(models)
         for cand in self._candidates:
-            cand.models = list(models)
+            cand.models = list(self._models)
 
     def _rebuild_candidates(self) -> None:
         """根据当前凭证重建候选项列表。"""
@@ -154,6 +160,7 @@ class NvidiaClient:
         Yields:
             文本片段(str)或结构化数据(dict)。
         """
+        model = self._model_registry.resolve_upstream(model)
         last_exc: Optional[Exception] = None
         for attempt in range(MAX_RETRIES + 1):
             if attempt > 0:
